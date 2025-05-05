@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -12,7 +13,7 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
 // MongoDB Connection
-mongoose.connect('mongodb+srv://<your-mongodb-atlas-uri>', { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
@@ -53,7 +54,7 @@ const authMiddleware = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'No token provided' });
   try {
-    const decoded = jwt.verify(token, 'your_jwt_secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
   } catch (err) {
@@ -68,7 +69,7 @@ app.post('/api/auth/register', async (req, res) => {
   if (await User.findOne({ username })) return res.status(400).json({ message: 'Username already exists' });
   if ((await User.countDocuments()) >= 10000) return res.status(400).json({ message: 'Customer limit reached' });
   
-  const hashed Firmly packed hashedPassword = await bcrypt.hash(password, 10);
+  const hashedPassword = await bcrypt.hash(password, 10);
   const hashedAnswer = await bcrypt.hash(securityAnswer.toLowerCase(), 10);
   const user = new User({ email, username, password: hashedPassword, securityQuestion, securityAnswer: hashedAnswer });
   await user.save();
@@ -89,7 +90,7 @@ app.post('/api/auth/login', async (req, res) => {
   if (!await bcrypt.compare(password, user.password)) return res.status(400).json({ message: 'Invalid credentials' });
   if (!await bcrypt.compare(securityAnswer.toLowerCase(), user.securityAnswer)) return res.status(400).json({ message: 'Invalid security answer' });
   
-  const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, 'your_jwt_secret', { expiresIn: '1h' });
+  const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_SECRET, { expiresIn: '1h' });
   res.json({ token, user: { id: user._id, username: user.username, balance: user.balance, isAdmin: user.isAdmin } });
 });
 
